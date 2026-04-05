@@ -2,7 +2,9 @@ package com.example.gemma4camera.inference
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,9 +22,7 @@ class GemmaInference {
         val options = LlmInference.LlmInferenceOptions.builder()
             .setModelPath(modelPath)
             .setMaxTokens(256)
-            .setTopK(40)
-            .setTemperature(0.7f)
-            .setRandomSeed(42)
+            .setMaxNumImages(1)
             .build()
         llmInference = LlmInference.createFromOptions(context, options)
     }
@@ -32,10 +32,23 @@ class GemmaInference {
             val inference = llmInference
                 ?: throw IllegalStateException("モデルが初期化されていません")
 
-            // MediaPipe LLM Inference API でマルチモーダル入力
-            // VLM モデル（Gemma 4 E2B）はビットマップを直接受け取れる
-            val response = inference.generateResponse(prompt)
-            response.ifBlank { "説明を生成できませんでした" }
+            // セッションベースの API で画像 + テキストを送信
+            val sessionOptions = LlmInferenceSession.LlmInferenceSessionOptions.builder()
+                .setTopK(40)
+                .setTemperature(0.7f)
+                .setRandomSeed(42)
+                .build()
+
+            val session = LlmInferenceSession.createFromOptions(inference, sessionOptions)
+            try {
+                val mpImage = BitmapImageBuilder(bitmap).build()
+                session.addImage(mpImage)
+                session.addQueryChunk(prompt)
+                val response = session.generateResponse()
+                response.ifBlank { "説明を生成できませんでした" }
+            } finally {
+                session.close()
+            }
         }
 
     fun close() {

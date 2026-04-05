@@ -55,8 +55,9 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
 
-    // MediaPipe GenAI
+    // MediaPipe GenAI + Vision (for MPImage)
     implementation(libs.mediapipe.genai)
+    implementation(libs.mediapipe.vision)
 
     // AndroidX
     implementation(libs.lifecycle.runtime.ktx)
